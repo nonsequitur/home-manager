@@ -13,7 +13,7 @@ in
     xsession = {
       enable = mkEnableOption "X Session";
 
-      windowManager = mkOption {
+      windowManager.command = mkOption {
         type = types.str;
         example = literalExample ''
           let
@@ -23,7 +23,9 @@ in
           in
             "''${xmonad}/bin/xmonad";
         '';
-        description = "Path to window manager to exec.";
+        description = ''
+          Command used to start the window manager.
+        '';
       };
 
       initExtra = mkOption {
@@ -92,7 +94,7 @@ in
 
         ${cfg.initExtra}
 
-        ${cfg.windowManager}
+        ${cfg.windowManager.command}
 
         systemctl --user stop graphical-session.target
         systemctl --user stop graphical-session-pre.target
