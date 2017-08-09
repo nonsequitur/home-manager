@@ -68,8 +68,7 @@ function doBuild() {
         exit 1
     fi
 
-    local extraArgs
-    extraArgs=""
+    local extraArgs=""
 
     for p in "${EXTRA_NIX_PATH[@]}"; do
         extraArgs="$extraArgs -I $p"
@@ -87,8 +86,7 @@ function doBuild() {
 }
 
 function doSwitch() {
-    local wrkdir
-    wrkdir="$(mktemp -d)"
+    local wrkdir="$(mktemp -d)"
 
     if doBuild "$wrkdir/generation" ; then
         "$wrkdir/generation/activate"
@@ -105,8 +103,7 @@ function doListGens() {
 }
 
 function doListPackages() {
-    local outPath
-    outPath="$(nix-env -q --out-path | grep -o '/.*home-manager-path$')"
+    local outPath="$(nix-env -q --out-path | grep -o '/.*home-manager-path$')"
     if [[ -n "$outPath" ]] ; then
         nix-store -q --references "$outPath" | sed 's/[^-]*-//'
     else

@@ -10,8 +10,7 @@ function setupColors() {
     # Check if stdout is a terminal.
     if [[ -t 1 ]]; then
         # See if it supports colors.
-        local ncolors
-        ncolors=$(tput colors)
+        local ncolors=$(tput colors)
 
         if [[ -n "$ncolors" && "$ncolors" -ge 8 ]]; then
             normalColor="$(tput sgr0)"

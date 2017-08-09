@@ -1,9 +1,8 @@
 function setupVars() {
     local profilesPath="/nix/var/nix/profiles/per-user/$USER"
     local gcPath="/nix/var/nix/gcroots/per-user/$USER"
-    local greatestGenNum
 
-    greatestGenNum=$( \
+    local greatestGenNum=$( \
         find "$profilesPath" -name 'home-manager-*-link' \
             | sed 's/^.*-\([0-9]*\)-link$/\1/' \
             | sort -rn \
