@@ -49,24 +49,8 @@ function setHomeManagerModulesPath() {
 }
 
 function doBuild() {
-    if [[ -z "$1" ]]; then
-        echo "Need to provide generation output path."
-        exit 1
-    fi
-
-    if [[ -e "$1" ]]; then
-        echo "The output path $1 already exists."
-        exit 1
-    fi
-
     setConfigFile
     setHomeManagerModulesPath
-
-    output="$(realpath "$1")"
-
-    if [[ $? -ne 0 ]]; then
-        exit 1
-    fi
 
     local extraArgs=""
 
@@ -81,15 +65,14 @@ function doBuild() {
     nix-build $extraArgs \
               "@HOME_MANAGER_EXPR_PATH@" \
               --argstr confPath "$HOME_MANAGER_CONFIG" \
-              -A activation-script \
-              -o "$output"
+              -A activation-script
 }
 
 function doSwitch() {
     local wrkdir="$(mktemp -d)"
-
+    local generation
     local exitCode=0
-    doBuild "$wrkdir/generation" && "$wrkdir/generation/activate" || exitCode=1
+    generation=$(doBuild) && $generation/activate || exitCode=1
 
     # Because the previous command never fails, the script keeps running and
     # $wrkdir is always removed.
@@ -168,7 +151,7 @@ cmd="$*"
 
 case "$cmd" in
     build)
-        doBuild "result"
+        doBuild
         ;;
     switch)
         doSwitch
