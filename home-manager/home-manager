@@ -8,7 +8,7 @@ PATH=@coreutils@/bin:$PATH
 set -euo pipefail
 
 function errorEcho() {
-    >&2 echo "$*"
+    echo "$*" >&2
 }
 
 # Attempts to set the HOME_MANAGER_CONFIG global variable.
@@ -52,12 +52,11 @@ function setHomeManagerModulesPath() {
     done
 }
 
-function doBuild() {
+function doBuildAttr() {
     setConfigFile
     setHomeManagerModulesPath
 
-    local extraArgs
-    extraArgs="$1"
+    local extraArgs="$*"
 
     for p in "${EXTRA_NIX_PATH[@]}"; do
         extraArgs="$extraArgs -I $p"
@@ -67,18 +66,55 @@ function doBuild() {
         extraArgs="$extraArgs --show-trace"
     fi
 
-    nix-build $extraArgs \
-              "@HOME_MANAGER_EXPR_PATH@" \
-              --argstr confPath "$HOME_MANAGER_CONFIG" \
-              --argstr confAttr "$HOME_MANAGER_CONFIG_ATTRIBUTE" \
-              -A activationPackage
+    nix-build \
+        "@HOME_MANAGER_EXPR_PATH@" \
+        $extraArgs \
+        --argstr confPath "$HOME_MANAGER_CONFIG" \
+        --argstr confAttr "$HOME_MANAGER_CONFIG_ATTRIBUTE"
+}
+
+function presentNews() {
+    local infoFile
+    infoFile=$(doBuildNews -A newsInfo) || return 1
+
+    # shellcheck source=/dev/null
+    . "$infoFile"
+
+    if [[ $newsNumUnread -eq 0 ]]; then
+        return
+    elif [[ "$newsDisplay" == "notify" ]]; then
+        # Not actually an error but here stdout is reserved for
+        # nix-build output.
+        errorEcho
+        if [[ $newsNumUnread -eq 1 ]]; then
+            errorEcho "There is an unread and relevant news item."
+            errorEcho "Read it by running the command '$(basename "$0") news'."
+        else
+            errorEcho "There are $newsNumUnread unread and relevant news items."
+            errorEcho "Read them by running the command '$(basename "$0") news'."
+        fi
+        errorEcho
+    elif [[ "$newsDisplay" == "show" ]]; then
+        doShowNews --unread
+    else
+        errorEcho "Unknown 'news.display' setting '$newsDisplay'."
+    fi
+}
+
+function doBuild() {
+    presentNews
+
+    doBuildAttr -A activationPackage
 }
 
 function doSwitch() {
+    presentNews
+
     local generation
     local exitCode=0
 
-    generation=$(doBuild "--no-out-link") && $generation/activate || exitCode=1
+    generation=$(doBuildAttr --no-out-link -A activationPackage) \
+        && "$generation/activate" || exitCode=1
 
     return $exitCode
 }
@@ -100,8 +136,45 @@ function doListPackages() {
     fi
 }
 
+function doBuildNews() {
+    local dataDir="${XDG_DATA_HOME:-$HOME/.local/share}/home-manager"
+    local timestampPath="$dataDir/news-timestamp"
+    local since="1970-01-01T00:00:00+00:00"
+
+    if [[ -r "$timestampPath" ]]; then
+        read -r since < "$timestampPath"
+    fi
+
+    doBuildAttr "$*" \
+                --no-out-link \
+                --arg check false \
+                --argstr newsSince "$since"
+}
+
 function doShowNews() {
-    echo "Not implemented yet"
+    local infoFile
+    infoFile=$(doBuildNews -A newsInfo) || return 1
+
+    # shellcheck source=/dev/null
+    . "$infoFile"
+
+    case $1 in
+        --all)
+            ${PAGER:-less} "$newsFileAll"
+            ;;
+        --unread)
+            ${PAGER:-less} "$newsFileUnread"
+            ;;
+        *)
+            echo "Unknown argument $1"
+            return 1
+    esac
+
+    local dataDir="${XDG_DATA_HOME:-$HOME/.local/share}/home-manager"
+    local timestampPath="$dataDir/news-timestamp"
+
+    mkdir -p "$dataDir"
+    echo "$newsLatestEntryTime" > "$timestampPath"
 }
 
 function doHelp() {
@@ -124,6 +197,7 @@ function doHelp() {
     echo "  switch       Build and activate configuration"
     echo "  generations  List all home environment generations"
     echo "  packages     List all packages installed in home-manager-path"
+    echo "  news         Show news entries in a pager"
 }
 
 EXTRA_NIX_PATH=()
@@ -165,7 +239,7 @@ cmd="$*"
 
 case "$cmd" in
     build)
-        doBuild ""
+        doBuild
         ;;
     switch)
         doSwitch
@@ -177,7 +251,7 @@ case "$cmd" in
         doListPackages
         ;;
     news)
-        doShowNews
+        doShowNews --all
         ;;
     help|--help)
         doHelp
