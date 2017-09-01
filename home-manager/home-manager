@@ -3,7 +3,7 @@
 # This code explicitly requires GNU Core Utilities and we therefore
 # need to ensure they are prioritized over any other similarly named
 # tools on the system.
-PATH=@coreutils@/bin:$PATH
+PATH=@coreutils@/bin:@less@/bin${PATH:+:}$PATH
 
 set -euo pipefail
 
