@@ -2,7 +2,7 @@
 , confPath
 , confAttr
 , check ? true
-, newsSince ? "1970-01-01T00:00:00+00:00"
+, newsReadIdsFile ? null
 }:
 
 with pkgs.lib;
@@ -19,18 +19,20 @@ let
     check = check;
   };
 
+  newsReadIds =
+    if newsReadIdsFile == null
+    then []
+    else splitString "\n" (fileContents newsReadIdsFile);
+
+  newsIsRead = entry: builtins.elem entry.id newsReadIds;
+
   newsFiltered =
     let
-      pred = entry: entry.condition && entry.time > newsSince;
+      pred = entry: entry.condition && ! newsIsRead entry;
     in
       filter pred env.newsEntries;
 
   newsNumUnread = length newsFiltered;
-
-  newsLatestEntryTime =
-    if env.newsEntries == []
-    then "1970-01-01T00:00:00+00:00"
-    else (head env.newsEntries).time;
 
   newsFileUnread = pkgs.writeText "news-unread.txt" (
     concatMapStringsSep "\n\n" (entry:
@@ -48,7 +50,7 @@ let
   newsFileAll = pkgs.writeText "news-all.txt" (
     concatMapStringsSep "\n\n" (entry:
       let
-        flag = if entry.time > newsSince then "unread" else "read";
+        flag = if newsIsRead entry then "read" else "unread";
         time = replaceStrings ["T"] [" "] (removeSuffix "+00:00" entry.time);
       in
         ''
@@ -59,12 +61,16 @@ let
     ) env.newsEntries
   );
 
+  newsUnreadIdsFile = pkgs.writeText "news-unread-ids" (
+    concatMapStringsSep "\n" (entry: entry.id) newsFiltered
+  );
+
   newsInfo = pkgs.writeText "news-info.sh" ''
     local newsNumUnread=${toString newsNumUnread}
     local newsDisplay="${env.newsDisplay}"
-    local newsLatestEntryTime="${newsLatestEntryTime}"
     local newsFileAll="${newsFileAll}"
     local newsFileUnread="${newsFileUnread}"
+    local newsUnreadIdsFile="${newsUnreadIdsFile}"
   '';
 
 in

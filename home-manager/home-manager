@@ -136,19 +136,25 @@ function doListPackages() {
     fi
 }
 
-function doBuildNews() {
+function newsReadIdsFile() {
     local dataDir="${XDG_DATA_HOME:-$HOME/.local/share}/home-manager"
-    local timestampPath="$dataDir/news-timestamp"
-    local since="1970-01-01T00:00:00+00:00"
+    local path="$dataDir/news-read-ids"
 
-    if [[ -r "$timestampPath" ]]; then
-        read -r since < "$timestampPath"
+    # If the path doesn't exist then we should create it, otherwise
+    # Nix will error out when we attempt to use builtins.readFile.
+    if [[ ! -f "$path" ]]; then
+        mkdir -p "$dataDir"
+        touch "$path"
     fi
 
+    echo "$path"
+}
+
+function doBuildNews() {
     doBuildAttr "$*" \
                 --no-out-link \
                 --arg check false \
-                --argstr newsSince "$since"
+                --argstr newsReadIdsFile "$(newsReadIdsFile)"
 }
 
 function doShowNews() {
@@ -170,11 +176,14 @@ function doShowNews() {
             return 1
     esac
 
-    local dataDir="${XDG_DATA_HOME:-$HOME/.local/share}/home-manager"
-    local timestampPath="$dataDir/news-timestamp"
+    local newsReadIdsFile
+    newsReadIdsFile="$(newsReadIdsFile)"
 
-    mkdir -p "$dataDir"
-    echo "$newsLatestEntryTime" > "$timestampPath"
+    local tempNewReadIdsFile
+    tempNewReadIdsFile="$(mktemp -t hm-news-read-ids.XXXXXXXXXX)"
+
+    sort -u "$newsReadIdsFile" "$newsUnreadIdsFile" > "$tempNewReadIdsFile"
+    mv -f "$tempNewReadIdsFile" "$newsReadIdsFile"
 }
 
 function doHelp() {
