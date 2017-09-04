@@ -8,7 +8,7 @@ PATH=@coreutils@/bin:@less@/bin${PATH:+:}$PATH
 set -euo pipefail
 
 function errorEcho() {
-    echo "$*" >&2
+    echo $* >&2
 }
 
 # Attempts to set the HOME_MANAGER_CONFIG global variable.
@@ -83,17 +83,24 @@ function presentNews() {
     if [[ $newsNumUnread -eq 0 ]]; then
         return
     elif [[ "$newsDisplay" == "notify" ]]; then
+        local msg
+        if [[ $newsNumUnread -eq 1 ]]; then
+            msg="There is an unread and relevant news item.\n"
+            msg+="Read it by running the command '$(basename "$0") news'."
+        else
+            msg="There are $newsNumUnread unread and relevant news items.\n"
+            msg+="Read them by running the command '$(basename "$0") news'."
+        fi
+
         # Not actually an error but here stdout is reserved for
         # nix-build output.
         errorEcho
-        if [[ $newsNumUnread -eq 1 ]]; then
-            errorEcho "There is an unread and relevant news item."
-            errorEcho "Read it by running the command '$(basename "$0") news'."
-        else
-            errorEcho "There are $newsNumUnread unread and relevant news items."
-            errorEcho "Read them by running the command '$(basename "$0") news'."
-        fi
+        errorEcho -e "$msg"
         errorEcho
+
+        if type -P notify-send > /dev/null; then
+            notify-send "Home Manager" "$msg"
+        fi
     elif [[ "$newsDisplay" == "show" ]]; then
         doShowNews --unread
     else
