@@ -6,8 +6,17 @@ let
 
   cfg = config.news;
 
-  entryModule = types.submodule {
+  entryModule = types.submodule ({ config, ... }: {
     options = {
+      id = mkOption {
+        internal = true;
+        type = types.str;
+        description = ''
+          A unique entry identifier. By default it is a base16
+          formatted hash of the entry message.
+        '';
+      };
+
       time = mkOption {
         internal = true;
         type = types.str;
@@ -30,7 +39,11 @@ let
         description = "The news entry content.";
       };
     };
-  };
+
+    config = {
+      id = mkDefault (builtins.hashString "sha256" config.message);
+    };
+  });
 
 in
 
