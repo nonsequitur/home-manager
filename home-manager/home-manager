@@ -115,16 +115,11 @@ function doBuild() {
 
 function doSwitch() {
     local generation
-    local exitCode=0
 
     generation=$(doBuildAttr --no-out-link -A activationPackage) \
-        && "$generation/activate" || exitCode=1
+        && "$generation/activate"
 
-    if [[ $exitCode -eq 0 ]]; then
-        presentNews
-    fi
-
-    return $exitCode
+    presentNews
 }
 
 function doListGens() {
