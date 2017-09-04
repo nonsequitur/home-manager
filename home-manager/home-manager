@@ -98,7 +98,7 @@ function presentNews() {
         errorEcho -e "$msg"
         errorEcho
 
-        if type -P notify-send > /dev/null; then
+        if [[ -v DISPLAY ]] && type -P notify-send > /dev/null; then
             notify-send "Home Manager" "$msg"
         fi
     elif [[ "$newsDisplay" == "show" ]]; then
