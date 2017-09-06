@@ -90,7 +90,9 @@ let
     };
   };
 
-  homeFilePattern = "-home-manager-files/";
+  # A unique name to distinguish home-manager files in $HOME from regular files.
+  homeFileName = "9Ec2V-home-file";
+  homeFilePattern = "-${homeFileName}";
 
 in
 
@@ -137,7 +139,7 @@ in
             target = mkDefault name;
             source = mkIf (config.text != null)
                        (mkDefault (pkgs.writeTextFile {
-                          name = "home-file";
+                          name = homeFileName;
                           text = config.text;
                           executable = config.executable;
                         }));
@@ -296,7 +298,7 @@ in
             relativePath="''${sourcePath#$newGenFiles/}"
             targetPath="$HOME/$relativePath"
             $DRY_RUN_CMD mkdir -p $VERBOSE_ARG "$(dirname "$targetPath")"
-            $DRY_RUN_CMD ln -nsf $VERBOSE_ARG "$sourcePath" "$targetPath"
+            $DRY_RUN_CMD ln -nf $VERBOSE_ARG "$sourcePath" "$targetPath"
           done
         '';
 
@@ -312,7 +314,7 @@ in
             if [[ -e "$newGenFiles/$relativePath" ]] ; then
               $VERBOSE_ECHO "Checking $targetPath: exists"
             elif [[ ! "$(readlink "$targetPath")" =~ "${homeFilePattern}" ]] ; then
-              warnEcho "Path '$targetPath' not link into Home Manager generation. Skipping delete."
+              warnEcho "Path '$targetPath' is no home-manager file. Skipping delete."
             else
               $VERBOSE_ECHO "Checking $targetPath: gone (deleting)"
               $DRY_RUN_CMD rm $VERBOSE_ARG "$targetPath"
@@ -407,6 +409,35 @@ in
           ${activationCmds}
         '';
 
+        # Make file that gets linked into $HOME.
+        # It has the right execute permissions and a distinct name to be identifiable
+        # as a home-manager file.
+        makeHomeFile = file:
+          if file.text != null then
+            # File was created internally and already has the right name and
+            # execute bit
+            file.source
+          else
+            pkgs.stdenv.mkDerivation {
+              name = homeFileName;
+
+              inherit (file) source executable;
+
+              buildCommand = ''
+                if [[ -d $source ]]; then
+                  ln -s $source $out
+                else
+                  [[ -x $source ]] && isExecutable=1 || isExecutable=""
+                  if [[ $isExecutable == executable ]]; then
+                    ln $source $out
+                  else
+                    cp $source $out
+                    chmod ${if file.executable then "+x" else "-x"} $out
+                  fi
+                fi
+              '';
+            };
+
         home-files = pkgs.stdenv.mkDerivation {
           name = "home-manager-files";
 
@@ -415,12 +446,8 @@ in
             concatStringsSep "\n" (
               mapAttrsToList (n: v:
                 ''
-                  if [ -d "${v.source}" ]; then
-                    mkdir -pv "$(dirname "$out/${v.target}")"
-                    ln -sv "${v.source}" "$out/${v.target}"
-                  else
-                    install -D -m${if v.executable then "+x" else "-x"} "${v.source}" "$out/${v.target}"
-                  fi
+                  mkdir -p "$(dirname "$out/${v.target}")"
+                  ln -s ${makeHomeFile v} "$out/${v.target}"
                 ''
               ) cfg.file
             );
