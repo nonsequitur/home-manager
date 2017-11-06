@@ -29,7 +29,7 @@ let
 
       safeName = replaceStrings unsafeInName (empties unsafeInName) path;
     in
-      "home_file_" + safeName;
+      "home-file-" + safeName;
 
 in
 
