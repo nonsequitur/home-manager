@@ -126,12 +126,7 @@ in
     })
 
     {
-      home.file =
-        let
-          f = n: v: {
-            inherit (v) source target executable;
-          };
-        in mapAttrsToList f cfg.configFile;
+      home.file = cfg.configFile;
     }
   ];
 }
