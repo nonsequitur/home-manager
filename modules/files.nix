@@ -78,10 +78,14 @@ in
             };
 
             executable = mkOption {
-              type = types.bool;
-              default = false;
-              description = "Whether the file should be executable.";
-             };
+              type = types.nullOr types.bool;
+              default = null;
+              description = ''
+                Set the execute bit. If <literal>null</literal>, defaults to the mode
+                of the <varname>source</varname> file or to <literal>false</literal>
+                for files created through the <varname>text</varname> option.
+              '';
+            };
           };
 
           config = {
