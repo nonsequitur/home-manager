@@ -287,7 +287,7 @@ in
           fi
 
           mkdir -p "$(dirname "$target")"
-          if [[ -d $source ]]; then
+          if [[ ( $executable == null && ! $mode ) || -d $source ]]; then
             ln -s "$source" "$target"
           elif [[ $mode ]]; then
             install -m "$mode" "$source" "$target"
@@ -309,7 +309,7 @@ in
         mapAttrsToList (n: v: ''
           insertFile "${v.source}" \
                      "${v.target}" \
-                     "${builtins.toString v.executable}" \
+                     "${if v.executable == null then "null" else builtins.toString v.executable}" \
                      "${builtins.toString v.mode}"
         '') cfg
       );
