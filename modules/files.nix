@@ -289,8 +289,8 @@ in
           mkdir -p "$(dirname "$target")"
           if [[ -d $source ]]; then
             ln -s "$source" "$target"
-          elif [[ -n $mode ]]; then
-            install -m"$mode" "$source" "$target"
+          elif [[ $mode ]]; then
+            install -m "$mode" "$source" "$target"
           else
             [[ -x $source ]] && isExecutable=1 || isExecutable=""
             if [[ $isExecutable == $executable ]]; then
