@@ -129,8 +129,7 @@ in
       home.file =
         let
           f = n: v: {
-            inherit (v) source target;
-            mode = if v.executable then "777" else "444";
+            inherit (v) source target executable;
           };
         in mapAttrsToList f cfg.configFile;
     }
