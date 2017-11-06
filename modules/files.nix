@@ -310,7 +310,7 @@ in
           insertFile "${v.source}" \
                      "${v.target}" \
                      "${builtins.toString v.executable}" \
-                     "${optionalString (v.mode != null) v.mode}"
+                     "${builtins.toString v.mode}"
         '') cfg
       );
     };
