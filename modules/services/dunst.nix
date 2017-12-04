@@ -15,6 +15,7 @@ let
     in
       "${key}=${value'}";
   };
+  configFile = pkgs.writeText "dunst-config" (toDunstIni cfg.settings);
 
   themeType = types.submodule {
     options = {
@@ -63,7 +64,7 @@ in
       settings = mkOption {
         type = types.attrsOf types.attrs;
         default = {};
-        description = "Configuration written to ~/.config/dunstrc";
+        description = "Dunst configuration";
         example = literalExample ''
           {
             global = {
@@ -85,7 +86,6 @@ in
   };
 
   config = mkIf cfg.enable (
-    mkMerge [
       {
         xdg.dataFile."dbus-1/services/org.knopwob.dunst.service".source =
           "${pkgs.dunst}/share/dbus-1/services/org.knopwob.dunst.service";
@@ -146,14 +146,11 @@ in
           Service = {
             Type = "dbus";
             BusName = "org.freedesktop.Notifications";
-            ExecStart = "${pkgs.dunst}/bin/dunst";
+            ExecStart = "${pkgs.dunst}/bin/dunst -conf ${configFile}";
           };
+
+          Install.WantedBy = [ "graphical-session.target" ];
         };
       }
-
-      (mkIf (cfg.settings != {}) {
-        xdg.configFile."dunst/dunstrc".text = toDunstIni cfg.settings;
-      })
-    ]
   );
 }
